@@ -2,6 +2,8 @@ from django import forms
 from printshop.models import Category
 from datetime import date
 import re
+from .models import Product, FilamentDetails
+from decimal import Decimal
 
 class FilamentFilterForm(forms.Form):
     material = forms.CharField(required=False, widget=forms.TextInput(attrs={'placeholder': 'Material'}))
@@ -31,6 +33,7 @@ def validate_message(value):
     # The name check will be added dynamically in the view based on the user input.
 
 class ContactForm(forms.Form):
+
     nume = forms.CharField(
         max_length=10,
         required=True,
@@ -100,3 +103,120 @@ class ContactForm(forms.Form):
             raise forms.ValidationError("The message must end with your name as a signature.")
 
         return cleaned_data
+    
+
+
+class ProductForm(forms.ModelForm):
+    # Fields specific to filaments
+    material = forms.ChoiceField(
+        choices=[
+            ('PLA', 'PLA'),
+            ('PETG', 'PETG'),
+            ('ABS', 'ABS'),
+            ('TPU', 'TPU'),
+        ],
+        required=True,
+        label="Material",
+        error_messages={'required': 'Please select a material.'}
+    )
+    color = forms.CharField(
+        required=True,
+        label="Color",
+        error_messages={'required': 'Please enter a color.'}
+    )
+    diameter = forms.DecimalField(
+        required=True,
+        min_value=0.1,
+        max_value=5.0,
+        label="Diameter (mm)",
+        help_text="Enter the diameter of the filament in millimeters.",
+        error_messages={'required': 'Please provide a diameter.', 'invalid': 'Enter a valid number.'}
+    )
+    weight = forms.DecimalField(
+        required=True,
+        min_value=1,
+        max_value=5000,
+        label="Weight (grams)",
+        help_text="Enter the weight of the filament in grams.",
+        error_messages={'required': 'Please provide a weight.', 'invalid': 'Enter a valid number.'}
+    )
+
+    # Additional fields
+    quantity_to_add = forms.IntegerField(
+        min_value=1,
+        label="Quantity to Add",
+        help_text="Enter the number of items to add to stock.",
+        error_messages={'required': 'Please provide a quantity to add.'}
+    )
+    user_initials = forms.CharField(
+        max_length=5,
+        label="User Initials",
+        error_messages={'required': 'Please enter your initials.'}
+    )
+
+    class Meta:
+        model = Product
+        fields = ['name', 'price', 'quantity_to_add', 'user_initials', 'material', 'color', 'diameter', 'weight']
+        labels = {
+            'name': 'Product Name',
+            'price': 'Price per Unit',
+        }
+        error_messages = {
+            'name': {'required': 'Product name is required.'},
+            'price': {'required': 'Price is required.', 'invalid': 'Enter a valid price.'},
+        }
+
+    def clean_price(self):
+        price = self.cleaned_data.get('price')
+        if price and price < Decimal('0.01'):
+            raise forms.ValidationError("Price must be at least $0.01.")
+        return price
+
+    def clean_quantity_to_add(self):
+        quantity = self.cleaned_data.get('quantity_to_add')
+        if quantity and quantity > 1000:
+            raise forms.ValidationError("You cannot add more than 1000 units at once.")
+        return quantity
+
+    def clean(self):
+        cleaned_data = super().clean()
+        price = cleaned_data.get('price')
+        quantity_to_add = cleaned_data.get('quantity_to_add')
+
+        if price and quantity_to_add:
+            total_value = price * Decimal(quantity_to_add)
+            if total_value > Decimal('1000000.00'):
+                raise forms.ValidationError("Total value of stock cannot exceed $1,000,000.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        # Save the product first with commit=False
+        product = super().save(commit=False)
+
+        # Automatically set the category to "Filaments"
+        try:
+            filaments_category = Category.objects.get(name="Filaments")
+        except Category.DoesNotExist:
+            raise forms.ValidationError("The 'Filaments' category does not exist. Please create it in the admin panel.")
+        product.category = filaments_category
+
+        # Calculate excluded fields
+        product.total_value = self.cleaned_data['price'] * Decimal(self.cleaned_data['quantity_to_add'])
+        product.added_by = self.cleaned_data['user_initials']
+
+        if commit:
+            product.save()
+
+        # Save filament-specific details
+        filament_details = FilamentDetails(
+            product=product,
+            material=self.cleaned_data['material'],
+            color=self.cleaned_data['color'],
+            diameter=self.cleaned_data['diameter'],
+            weight=self.cleaned_data['weight']
+        )
+        if commit:
+            filament_details.save()
+
+        return product

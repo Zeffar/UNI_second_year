@@ -1,9 +1,9 @@
 from datetime import date
 from django.core.paginator import Paginator
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import Product, Category, FilamentDetails
 from django.http import JsonResponse
-from .forms import FilamentFilterForm, ContactForm
+from .forms import FilamentFilterForm, ContactForm, ProductForm
 from django.conf import settings
 import json
 import os
@@ -176,3 +176,16 @@ def contact_view(request):
         form = ContactForm()
 
     return render(request, 'printshop/contact.html', {'form': form})
+
+
+
+def add_product_view(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            form.save()  # Save with both product and filament details
+            return redirect('.')  # Adjust to your desired redirection
+    else:
+        form = ProductForm()
+
+    return render(request, 'printshop/add_product.html', {'form': form})
