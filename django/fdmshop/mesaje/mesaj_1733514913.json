@@ -1,0 +1,11 @@
+{
+    "nume": "Doe",
+    "prenume": "John",
+    "data_nasterii": "1998-12-09",
+    "email": "bob.ross@bobmail.com",
+    "tip_mesaj": "review",
+    "subiect": "Bobreview",
+    "minim_zile_asteptare": 2,
+    "varsta": "25 years and 0 months",
+    "mesaj": "This is a great product! Regards, Doe"
+}

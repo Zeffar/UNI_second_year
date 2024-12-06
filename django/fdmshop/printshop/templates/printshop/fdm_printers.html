@@ -1,0 +1,31 @@
+<!-- printshop/templates/printshop/fdm_printers.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDM Printers</title>
+</head>
+<body>
+    <h1>FDM Printers</h1>
+    
+    {% if fdm_printers %}
+        <ul>
+            {% for printer in fdm_printers %}
+                <li>
+                    <h2>{{ printer.name }}</h2>
+                    <p>{{ printer.description }}</p>
+                    <p><strong>Price:</strong> ${{ printer.price }}</p>
+                    <p><strong>Stock:</strong> {{ printer.stock_quantity }} units</p>
+                    <p><strong>Brand:</strong> {{ printer.brand }}</p>
+                    <p><strong>Added On:</strong> {{ printer.created_at }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No FDM Printers available.</p>
+    {% endif %}
+    
+</body>
+</html>
