@@ -2,7 +2,8 @@ from django import forms
 from printshop.models import Category
 from datetime import date
 import re
-from .models import Product, FilamentDetails
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from .models import Product, FilamentDetails, CustomUser
 from decimal import Decimal
 
 class FilamentFilterForm(forms.Form):
@@ -104,7 +105,6 @@ class ContactForm(forms.Form):
 
         return cleaned_data
     
-
 
 class ProductForm(forms.ModelForm):
     # Fields specific to filaments
@@ -220,3 +220,40 @@ class ProductForm(forms.ModelForm):
             filament_details.save()
 
         return product
+    
+
+class RegistrationForm(UserCreationForm):
+    phone_number = forms.CharField(required=True, max_length=15, label="Phone Number")
+    date_of_birth = forms.DateField(required=True, widget=forms.DateInput(attrs={'type': 'date'}), label="Date of Birth")
+    address = forms.CharField(required=True, widget=forms.Textarea, label="Address")
+    profile_picture = forms.ImageField(required=False, label="Profile Picture")
+    bio = forms.CharField(required=True, widget=forms.Textarea, label="Bio")
+
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'email', 'phone_number', 'date_of_birth', 'address', 'profile_picture', 'bio', 'password1', 'password2']
+
+    def clean_date_of_birth(self):
+        dob = self.cleaned_data['date_of_birth']
+        from datetime import date
+        if (date.today().year - dob.year) < 18:
+            raise forms.ValidationError("You must be at least 18 years old to register.")
+        return dob
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data['phone_number']
+        if not phone.isdigit():
+            raise forms.ValidationError("Phone number must contain only digits.")
+        if len(phone) < 10 or len(phone) > 15:
+            raise forms.ValidationError("Phone number must be between 10 and 15 digits.")
+        return phone
+
+    def clean_bio(self):
+        bio = self.cleaned_data['bio']
+        if len(bio.split()) < 10:
+            raise forms.ValidationError("Bio must contain at least 10 words.")
+        return bio
+    
+class LoginForm(AuthenticationForm):
+    remember_me = forms.BooleanField(required=False, label="Remember Me")
+

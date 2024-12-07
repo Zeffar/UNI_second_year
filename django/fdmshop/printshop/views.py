@@ -3,10 +3,16 @@ from django.core.paginator import Paginator
 from django.shortcuts import render, redirect
 from .models import Product, Category, FilamentDetails
 from django.http import JsonResponse
-from .forms import FilamentFilterForm, ContactForm, ProductForm
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib import messages
+from .forms import FilamentFilterForm, ContactForm, ProductForm, RegistrationForm, LoginForm
 from django.conf import settings
 import json
 import os
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
 from time import time
 
 def product_filter_view(request):
@@ -188,4 +194,80 @@ def add_product_view(request):
     else:
         form = ProductForm()
 
-    return render(request, 'printshop/add_product.html', {'form': form})
+    return render(request, 'printshop/add_product.html', {'form': form}) 
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('profile')
+    else:
+        form = RegistrationForm()
+    return render(request, 'printshop/register.html', {'form': form})
+
+def login_view(request):
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            remember_me = form.cleaned_data.get('remember_me')
+            if remember_me:
+                request.session.set_expiry(86400)  # 1 day in seconds
+            else:
+                request.session.set_expiry(0)  # Session expires on browser close
+            return redirect('profile')
+    else:
+        form = LoginForm()
+    return render(request, 'printshop/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+@login_required
+def profile_view(request):
+    user = request.user
+    user_data = {
+        'username': user.username,
+        'email': user.email,
+        'phone_number': user.phone_number,
+        'date_of_birth': user.date_of_birth.isoformat() if user.date_of_birth else None,
+        'address': user.address,
+        'profile_picture': user.profile_picture.url if user.profile_picture else None,  # URL for profile picture
+        'bio': user.bio,
+    }
+
+    print("Profile Picture URL:", user_data['profile_picture'])  # Debugging
+
+    # Store user data in session
+    request.session['user_data'] = user_data
+
+    return render(request, 'printshop/profile.html', {'user_data': user_data})
+
+# @login_required
+# def change_password_view(request):
+#     if request.method == 'POST':
+#         form = PasswordChangeForm(request.user, request.POST)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, "Your password has been successfully updated.")
+#             return redirect('profile')
+#     else:
+#         form = PasswordChangeForm(request.user)
+#     return render(request, 'printshop/change_password.html', {'form': form})
+
+
+
+class CustomPasswordChangeView(PasswordChangeView):
+    template_name = 'printshop/change_password.html'
+    success_url = reverse_lazy('profile')
+
+    def get_success_url(self):
+        print("Redirecting to:", self.success_url)  # Debugging log
+        return self.success_url
+
+# Wrap the view to ensure only logged-in users can access it
+change_password_view = login_required(CustomPasswordChangeView.as_view())

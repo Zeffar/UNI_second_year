@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.models import AbstractUser
 # Category model for product categories
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -85,6 +85,7 @@ class Order(models.Model):
 
 # OrderItem model for storing individual items in an order
 class OrderItem(models.Model):
+
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='order_items')
     quantity = models.PositiveIntegerField()
@@ -96,3 +97,13 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = "Order item"
         verbose_name_plural = "Order items"
+
+
+class CustomUser(AbstractUser):
+    phone_number = models.CharField(max_length=15, blank=True, null=True, help_text="Enter your phone number.")
+    date_of_birth = models.DateField(blank=True, null=True, help_text="Enter your date of birth.")
+    address = models.TextField(blank=True, null=True, help_text="Enter your address.")
+    profile_picture = models.ImageField(upload_to="profile_pics/", blank=True, null=True)
+    bio = models.TextField(blank=True, null=True, help_text="Tell us something about yourself.")
+    code = models.CharField(max_length=100, blank=True, null=True)  # Random confirmation code
+    email_confirmed = models.BooleanField(default=False)  # Email confirmation status

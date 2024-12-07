@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+</head>
+<body>
+    <h1>User Profile</h1>
+
+    {% if user_data.profile_picture %}
+        <div>
+            <img src="{{ user_data.profile_picture }}" alt="Profile Picture" style="max-width: 200px; max-height: 200px; border-radius: 50%;">
+        </div>
+    {% else %}
+        <p>No profile picture uploaded.</p>
+    {% endif %}
+
+    <ul>
+        <li>Username: {{ user_data.username }}</li>
+        <li>Email: {{ user_data.email }}</li>
+        <li>Phone Number: {{ user_data.phone_number }}</li>
+        <li>Date of Birth: {{ user_data.date_of_birth }}</li>
+        <li>Address: {{ user_data.address }}</li>
+        <li>Bio: {{ user_data.bio }}</li>
+    </ul>
+
+    <a href="{% url 'change_password' %}">Change Password</a>
+    <a href="{% url 'logout' %}">Logout</a>
+</body>
+</html>
