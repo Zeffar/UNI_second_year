@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings  # Import settings to access AUTH_USER_MODEL
+
+
+
 # Category model for product categories
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -107,3 +111,16 @@ class CustomUser(AbstractUser):
     bio = models.TextField(blank=True, null=True, help_text="Tell us something about yourself.")
     code = models.CharField(max_length=100, blank=True, null=True)  # Random confirmation code
     blocat = models.BooleanField(default=False, help_text="Mark as blocked to prevent user login")
+
+
+class Basket(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class BasketItem(models.Model):
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def subtotal(self):
+        return self.quantity * self.product.price

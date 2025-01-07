@@ -45,6 +45,18 @@
             padding: 15px;
             background-color: #f9f9f9;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        li ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        li form {
+            margin-top: 15px;
         }
 
         .pagination {
@@ -91,9 +103,6 @@
         <label for="stock_max">Max Stock:</label>
         <input type="number" name="stock_max" id="stock_max" value="{{ request.GET.stock_max }}">
         
-        {% comment %} <label for="brand">Brand:</label>
-        <input type="text" name="brand" id="brand" placeholder="e.g., Creality" value="{{ request.GET.brand }}"> {% endcomment %}
-        
         <label for="diameter">Diameter:</label>
         <input type="number" step="0.01" name="diameter" id="diameter" placeholder="e.g., 1.75" value="{{ request.GET.diameter }}">
         
@@ -107,7 +116,7 @@
     <ul>
         {% for filament in page_obj %}
         <li>
-            <strong>{{ filament.name }}</strong><br>
+            <strong>{{ filament.name }}</strong>
             <ul>
                 <li>Material: {{ filament.filament_details.material }}</li>
                 <li>Color: {{ filament.filament_details.color }}</li>
@@ -116,6 +125,16 @@
                 <li>Price: ${{ filament.price }}</li>
                 <li>Stock: {{ filament.stock_quantity }}</li>
             </ul>
+            
+            <!-- Add to Basket Button -->
+            {% if filament.id in basket_item_ids %}
+                <p>Already in Basket</p>
+            {% else %}
+                <form method="post" action="{% url 'add_to_basket' filament.id %}">
+                    {% csrf_token %}
+                    <button type="submit">Add to Basket</button>
+                </form>
+            {% endif %}
         </li>
         {% empty %}
         <li>No filaments found matching your criteria.</li>

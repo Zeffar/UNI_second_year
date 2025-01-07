@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Basket</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #007bff;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        td {
+            background-color: #fafafa;
+        }
+
+        td:nth-child(1) {
+            text-align: left;
+        }
+
+        .total-section {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .empty-message {
+            text-align: center;
+            margin: 50px 0;
+            font-size: 1.2em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <h1>Your Basket</h1>
+    <div class="container">
+        {% if items %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Unit Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>${{ item.product.price }}</td>
+                    <td>
+                        <form method="post" action="{% url 'update_quantity' item.id %}">
+                            {% csrf_token %}
+                            <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" style="width: 60px;">
+                            <button type="submit">Update</button>
+                        </form>
+                    </td>
+                    <td>${{ item.subtotal|floatformat:2 }}</td>
+                    <td>
+                        <form method="post" action="{% url 'increment_quantity' item.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit">+</button>
+                        </form>
+                        <form method="post" action="{% url 'decrement_quantity' item.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit">-</button>
+                        </form>
+                        <form method="post" action="{% url 'remove_from_basket' item.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="total-section">
+            <span>Total Items: {{ total_items }}</span>
+            <span>Total Price: ${{ total_price }}</span>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{% url 'product_filter' %}" class="button">Continue Shopping</a>
+            <a href="#" class="button">Checkout</a>
+        </div>
+        {% else %}
+        <p class="empty-message">Your basket is empty. <a href="{% url 'product_filter' %}" class="button">Start Shopping</a></p>
+        {% endif %}
+    </div>
+</body>
+</html>

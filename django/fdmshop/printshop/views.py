@@ -1,7 +1,7 @@
 from datetime import date
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect
-from .models import Product, Category, FilamentDetails
+from .models import Product, Category, FilamentDetails, Basket, BasketItem
 from django.http import JsonResponse
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -10,6 +10,7 @@ from django.contrib import messages
 from .forms import FilamentFilterForm, ContactForm, ProductForm, RegistrationForm, LoginForm
 from django.conf import settings
 import json
+from django.shortcuts import get_object_or_404, redirect
 import os
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
@@ -184,8 +185,6 @@ def contact_view(request):
 
     return render(request, 'printshop/contact.html', {'form': form})
 
-
-
 def add_product_view(request):
     if request.method == 'POST':
         form = ProductForm(request.POST)
@@ -248,20 +247,6 @@ def profile_view(request):
 
     return render(request, 'printshop/profile.html', {'user_data': user_data})
 
-# @login_required
-# def change_password_view(request):
-#     if request.method == 'POST':
-#         form = PasswordChangeForm(request.user, request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, "Your password has been successfully updated.")
-#             return redirect('profile')
-#     else:
-#         form = PasswordChangeForm(request.user)
-#     return render(request, 'printshop/change_password.html', {'form': form})
-
-
-
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'printshop/change_password.html'
     success_url = reverse_lazy('profile')
@@ -270,7 +255,6 @@ class CustomPasswordChangeView(PasswordChangeView):
         print("Redirecting to:", self.success_url)  # Debugging log
         return self.success_url
 
-# Wrap the view to ensure only logged-in users can access it
 change_password_view = login_required(CustomPasswordChangeView.as_view())
 
 
@@ -298,3 +282,120 @@ def index_view(request):
 
     extract_urls(url_patterns)
     return render(request, 'printshop/index.html', {'urls': urls})
+
+from django.http import HttpResponseBadRequest
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from .models import Basket, BasketItem, Product
+
+# Add item to basket
+def add_to_basket(request, product_id):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=product_id)
+
+        # Ensure stock is available
+        if product.stock_quantity <= 0:
+            # messages.warning(request, f"{product.name} is out of stock.")
+            return redirect('product_filter')
+
+        # Get or create the user's basket
+        basket, created = Basket.objects.get_or_create(user=request.user)
+
+        # Get or create the basket item
+        basket_item, created = BasketItem.objects.get_or_create(basket=basket, product=product)
+
+        # Update quantity
+        if basket_item.quantity < product.stock_quantity:
+            if not created:
+                basket_item.quantity += 1
+            basket_item.save()
+
+            product.stock_quantity -= 1
+            product.save()
+
+        #     messages.success(request, f"Added {product.name} to your basket.")
+        # else:
+        #     messages.warning(request, f"Cannot add more {product.name}, stock limit reached.")
+
+        return redirect('virtual_basket')
+    return HttpResponseBadRequest("Invalid request method.")
+
+# Update item quantity in basket
+def update_quantity(request, item_id):
+    if request.method == 'POST':
+        basket_item = get_object_or_404(BasketItem, id=item_id, basket__user=request.user)
+        quantity = int(request.POST.get('quantity', basket_item.quantity))
+        
+        if 0 < quantity <= basket_item.product.stock_quantity:
+            basket_item.product.stock_quantity = basket_item.product.stock_quantity - quantity + basket_item.quantity
+            basket_item.product.save()
+
+            basket_item.quantity = quantity
+            basket_item.save()
+
+            
+            messages.success(request, f"Updated {basket_item.product.name} quantity to {quantity}.")
+        else:
+            messages.error(request, f"Invalid quantity for {basket_item.product.name}.")
+        return redirect('virtual_basket')
+    return HttpResponseBadRequest("Invalid request method.")
+
+# Remove item from basket
+def remove_from_basket(request, item_id):
+    basket_item = get_object_or_404(BasketItem, id=item_id, basket__user=request.user)
+    basket_item.product.stock_quantity += basket_item.quantity
+    basket_item.product.save()
+
+    basket_item.delete()
+    messages.success(request, "Item removed from your basket.")
+    return redirect('virtual_basket')
+
+# Increment item quantity
+def increment_quantity(request, item_id):
+    basket_item = get_object_or_404(BasketItem, id=item_id, basket__user=request.user)
+    if basket_item.quantity < basket_item.product.stock_quantity:
+        basket_item.quantity += 1
+        basket_item.save()
+
+        basket_item.product.stock_quantity -= 1
+        basket_item.product.save()
+
+        messages.success(request, f"Incremented {basket_item.product.name} quantity.")
+    else:
+        messages.warning(request, f"Cannot add more {basket_item.product.name}, stock limit reached.")
+    return redirect('virtual_basket')
+
+# Decrement item quantity
+def decrement_quantity(request, item_id):
+    basket_item = get_object_or_404(BasketItem, id=item_id, basket__user=request.user)
+    if basket_item.quantity > 1:
+        basket_item.quantity -= 1
+        basket_item.save()
+
+        basket_item.product.stock_quantity += 1
+        basket_item.product.save()
+        
+        messages.success(request, f"Decremented {basket_item.product.name} quantity.")
+    else:
+        messages.warning(request, f"Minimum quantity for {basket_item.product.name} is 1.")
+    return redirect('virtual_basket')
+
+# Virtual basket view
+def virtual_basket_view(request):
+    basket = Basket.objects.filter(user=request.user).first()
+    if not basket:
+        return render(request, 'printshop/virtual_basket.html', {
+            'items': [],
+            'total_price': 0,
+            'total_items': 0,
+        })
+
+    items = basket.items.all()
+    total_price = sum(item.product.price * item.quantity for item in items)
+    total_items = sum(item.quantity for item in items)
+
+    return render(request, 'printshop/virtual_basket.html', {
+        'items': items,
+        'total_price': total_price,
+        'total_items': total_items,
+    })
