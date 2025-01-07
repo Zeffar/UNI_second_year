@@ -14,6 +14,7 @@ import os
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
 from time import time
+from django.urls import get_resolver, reverse
 
 def product_filter_view(request):
     # Get the Filaments category
@@ -271,3 +272,29 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 # Wrap the view to ensure only logged-in users can access it
 change_password_view = login_required(CustomPasswordChangeView.as_view())
+
+
+
+def index_view(request):
+    """
+    Render a template displaying all available URLs (excluding admin URLs) as clickable links.
+    """
+    url_patterns = get_resolver().url_patterns
+    urls = []
+
+    def extract_urls(patterns, prefix=""):
+        for pattern in patterns:
+            if hasattr(pattern, 'url_patterns'):  # For included URL patterns
+                extract_urls(pattern.url_patterns, prefix + str(pattern.pattern))
+            else:
+                # Skip admin URLs
+                if not str(pattern.pattern).startswith("admin"):
+                    url_name = getattr(pattern, 'name', None)
+                    if url_name:  # Only include named URLs
+                        try:
+                            urls.append({'name': url_name, 'url': reverse(url_name)})
+                        except Exception:
+                            pass  # Skip if reverse fails
+
+    extract_urls(url_patterns)
+    return render(request, 'printshop/index.html', {'urls': urls})

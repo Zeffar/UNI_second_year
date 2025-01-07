@@ -1,13 +1,36 @@
 # printshop/admin.py
 
 from django.contrib import admin
-
-from .models import Category, Product, FilamentDetails, Customer, Order, OrderItem
+from django.contrib.auth.admin import UserAdmin
+from .models import Category, Product, FilamentDetails, Customer, Order, OrderItem, CustomUser
 
 admin.site.site_header = "FDMShop Administration"
 admin.site.site_title="FDMShop Admin"
 admin.site.index_title="Welcome to the FDMShop Admin Panel"
 
+class CustomUserAdmin(UserAdmin):
+    fieldsets = (
+        ('User Information', {
+            'fields': ('username', 'first_name', 'last_name', 'email', 'blocat')
+        }),
+        ('Permissions', {
+            'fields': ('is_staff', 'is_active', 'groups', 'user_permissions'),
+        }),
+    )
+    list_display = ('username', 'email', 'blocat', 'is_staff')
+    list_filter = ('blocat', 'is_staff')
+    search_fields = ('username', 'email')
+    actions = ['block_users', 'unblock_users']
+
+    def block_users(self, request, queryset):
+        queryset.update(blocat=True)
+        self.message_user(request, "Selected users have been blocked.")
+
+    def unblock_users(self, request, queryset):
+        queryset.update(blocat=False)
+        self.message_user(request, "Selected users have been unblocked.")
+
+admin.site.register(CustomUser, CustomUserAdmin)
 
 # Register Category model
 @admin.register(Category)

@@ -106,4 +106,4 @@ class CustomUser(AbstractUser):
     profile_picture = models.ImageField(upload_to="profile_pics/", blank=True, null=True)
     bio = models.TextField(blank=True, null=True, help_text="Tell us something about yourself.")
     code = models.CharField(max_length=100, blank=True, null=True)  # Random confirmation code
-    email_confirmed = models.BooleanField(default=False)  # Email confirmation status
+    blocat = models.BooleanField(default=False, help_text="Mark as blocked to prevent user login")
