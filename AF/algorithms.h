@@ -9,31 +9,8 @@
 #include <climits>
 #include <tuple>
 #include <string>
-/*
-Function	Inputs	Outputs/Returns
-BFS	adj (unweighted), N, start	Distance vector from start node
-DFS	adj, N, start	Traversal order vector
-Kruskal	adj (weighted), N	(Total MST weight, MST edges)
-BellmanFord	adj (directed, weighted), N, start	(Success, distance vector)
-Dijkstra	adj (directed, non-neg weights), N, start	Distance vector
-NumberOfConnectedComponents	adj, N	Component count
-TopologicalSort	adj (DAG), N	Sorted order (or empty if cycle)
-CountStronglyConnectedComponents	adj (directed), N	SCC count
-LevenshteinDistance	s1, s2	Edit distance
-HamiltonianCycle	adj, N	(Exists, cycle path)
-HasEulerianCycle	adj (directed), N	Boolean
-FordFulkerson	adj (flow), N, source, sink	(Max flow, min cut edges)
-EdmondKarp	adj (flow), N, source, sink	Max flow value
-IsBipartite	adj, N	Boolean
-KMP	text, pattern	Indices of pattern matches
-BipartiteMaxMatching	adj (bipartite), m, n	Max matching size
-HavelHakimi	Degree sequence	Boolean (graph possible)
-FloydWarshall	adj (directed, weighted), N	(No negative cycles, all-pairs distance matrix)
-*/
 namespace GraphAlgorithms
 {
-
-    // BFS for undirected unweighted graphs
     std::vector<int> BFS(const std::vector<int> adj[], int N, int start)
     {
         std::vector<int> dist(N, -1);
@@ -58,7 +35,6 @@ namespace GraphAlgorithms
         return dist;
     }
 
-    // DFS for undirected unweighted graphs
     void DFSUtil(const std::vector<int> adj[], int u, std::vector<bool> &visited, std::vector<int> &result)
     {
         visited[u] = true;
@@ -81,7 +57,6 @@ namespace GraphAlgorithms
         return result;
     }
 
-    // Union-Find data structure for Kruskal's algorithm
     class DisjointSetUnion
     {
         std::vector<int> parent, rank;
@@ -121,14 +96,12 @@ namespace GraphAlgorithms
         }
     };
 
-    // Kruskal's algorithm for undirected weighted graphs
     std::pair<int, std::vector<std::tuple<int, int, int>>> Kruskal(const std::vector<std::pair<int, int>> adj[], int N)
     {
         std::vector<std::tuple<int, int, int>> edges;
         std::vector<std::tuple<int, int, int>> mstEdges;
         int mstWeight = 0;
 
-        // Collect edges (u, v, w) with u < v to avoid duplicates
         for (int u = 0; u < N; ++u)
         {
             for (const auto &[v, w] : adj[u])
@@ -140,7 +113,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Sort edges by weight
         std::sort(edges.begin(), edges.end());
 
         DisjointSetUnion dsu(N);
@@ -161,18 +133,16 @@ namespace GraphAlgorithms
         }
 
         if (edgesAdded != N - 1)
-            return {-1, {}}; // Graph is disconnected
+            return {-1, {}};
 
         return {mstWeight, mstEdges};
     }
 
-    // Bellman-Ford algorithm for directed weighted graphs
     std::pair<bool, std::vector<int>> BellmanFord(const std::vector<std::pair<int, int>> adj[], int N, int start)
     {
         std::vector<int> dist(N, INT_MAX);
         dist[start] = 0;
 
-        // Relax all edges N-1 times
         for (int i = 0; i < N - 1; ++i)
         {
             for (int u = 0; u < N; ++u)
@@ -190,7 +160,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Check for negative cycles
         for (int u = 0; u < N; ++u)
         {
             if (dist[u] == INT_MAX)
@@ -200,7 +169,7 @@ namespace GraphAlgorithms
             {
                 if (dist[v] > dist[u] + w)
                 {
-                    return {false, {}}; // Negative cycle detected
+                    return {false, {}};
                 }
             }
         }
@@ -208,7 +177,6 @@ namespace GraphAlgorithms
         return {true, dist};
     }
 
-    // Dijkstra's algorithm for directed weighted graphs with non-negative weights
     std::vector<int> Dijkstra(const std::vector<std::pair<int, int>> adj[], int N, int start)
     {
         std::vector<int> dist(N, INT_MAX);
@@ -239,7 +207,6 @@ namespace GraphAlgorithms
         return dist;
     }
 
-    // Number of connected components for undirected unweighted graphs
     int NumberOfConnectedComponents(const std::vector<int> adj[], int N)
     {
         std::vector<bool> visited(N, false);
@@ -274,7 +241,6 @@ namespace GraphAlgorithms
         return count;
     }
 
-    // Topological Sort for directed acyclic graphs (DAG)
     std::vector<int> TopologicalSort(const std::vector<int> adj[], int N)
     {
         std::vector<int> in_degree(N, 0);
@@ -317,13 +283,12 @@ namespace GraphAlgorithms
 
         if (count != N)
         {
-            return {}; // Graph contains a cycle
+            return {};
         }
 
         return result;
     }
 
-    // Helper function for the first DFS pass in Kosaraju's algorithm
     void DFSPostOrder(int u, const std::vector<int> adj[], std::vector<bool> &visited, std::vector<int> &order)
     {
         visited[u] = true;
@@ -337,7 +302,6 @@ namespace GraphAlgorithms
         order.push_back(u);
     }
 
-    // Helper function to reverse the graph
     std::vector<std::vector<int>> reverseGraph(const std::vector<int> adj[], int N)
     {
         std::vector<std::vector<int>> revAdj(N);
@@ -351,7 +315,6 @@ namespace GraphAlgorithms
         return revAdj;
     }
 
-    // Helper function for the second DFS pass in Kosaraju's algorithm
     void DFSUtilSCC(int u, const std::vector<std::vector<int>> &revAdj, std::vector<bool> &visited)
     {
         visited[u] = true;
@@ -364,13 +327,11 @@ namespace GraphAlgorithms
         }
     }
 
-    // Function to count the number of strongly connected components in a directed graph
     int CountStronglyConnectedComponents(const std::vector<int> adj[], int N)
     {
         std::vector<int> order;
         std::vector<bool> visited(N, false);
 
-        // First DFS pass to determine the finishing order
         for (int u = 0; u < N; ++u)
         {
             if (!visited[u])
@@ -379,10 +340,8 @@ namespace GraphAlgorithms
             }
         }
 
-        // Reverse the graph
         std::vector<std::vector<int>> revAdj = reverseGraph(adj, N);
 
-        // Second DFS pass on reversed graph in reverse finishing order
         std::vector<bool> visitedRev(N, false);
         int sccCount = 0;
 
@@ -426,7 +385,6 @@ namespace GraphAlgorithms
     {
         if (pos == N)
         {
-            // Check if the last vertex is connected to the first
             int last = path.back();
             for (int v : adj[last])
             {
@@ -451,7 +409,6 @@ namespace GraphAlgorithms
                     return true;
                 }
 
-                // Backtrack
                 visited[v] = false;
                 path[pos] = -1;
             }
@@ -469,7 +426,6 @@ namespace GraphAlgorithms
 
         if (N == 1)
         {
-            // Check for self-loop
             bool has_cycle = false;
             for (int v : adj[0])
             {
@@ -482,7 +438,6 @@ namespace GraphAlgorithms
             return {has_cycle, {0}};
         }
 
-        // Check if all vertices have degree >= 2
         for (int u = 0; u < N; ++u)
         {
             if (adj[u].size() < 2)
@@ -494,7 +449,6 @@ namespace GraphAlgorithms
         std::vector<int> path(N, -1);
         std::vector<bool> visited(N, false);
 
-        // Start at vertex 0
         path[0] = 0;
         visited[0] = true;
 
@@ -507,18 +461,14 @@ namespace GraphAlgorithms
     {
         std::vector<int> in_degree(N, 0);
 
-        // Calculate in-degrees for all vertices
         for (int u = 0; u < N; ++u)
         {
             for (int v : adj[u])
             {
-                if (v < 0 || v >= N)
-                    continue; // Ensure valid vertex index
                 in_degree[v]++;
             }
         }
 
-        // Check if all vertices have equal in-degree and out-degree
         for (int u = 0; u < N; ++u)
         {
             if (in_degree[u] != static_cast<int>(adj[u].size()))
@@ -527,7 +477,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Check if the graph is strongly connected
         return CountStronglyConnectedComponents(adj, N) == 1;
     }
 
@@ -540,7 +489,6 @@ namespace GraphAlgorithms
 
         std::vector<std::vector<Edge>> residualGraph(N);
 
-        // Build residual graph with forward and reverse edges
         for (int u = 0; u < N; ++u)
         {
             for (const auto &[v, c] : adj[u])
@@ -554,7 +502,6 @@ namespace GraphAlgorithms
 
         int max_flow = 0;
 
-        // Edmonds-Karp algorithm using BFS to find augmenting paths
         while (true)
         {
             std::vector<int> parent(N, -1);
@@ -586,7 +533,6 @@ namespace GraphAlgorithms
             if (!found)
                 break;
 
-            // Determine the minimum residual capacity on the augmenting path
             int current = sink;
             int min_capacity = INT_MAX;
             while (current != source)
@@ -603,7 +549,6 @@ namespace GraphAlgorithms
                 current = prev;
             }
 
-            // Augment the path and update residual capacities
             current = sink;
             while (current != source)
             {
@@ -623,7 +568,6 @@ namespace GraphAlgorithms
             max_flow += min_capacity;
         }
 
-        // BFS to find nodes reachable from source in the residual graph
         std::vector<bool> visited(N, false);
         std::queue<int> q_visited;
         q_visited.push(source);
@@ -644,7 +588,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Collect all original edges that cross from reachable to non-reachable
         std::vector<std::tuple<int, int, int>> min_cut;
         for (int u = 0; u < N; ++u)
         {
@@ -663,39 +606,8 @@ namespace GraphAlgorithms
         return {max_flow, min_cut};
     }
 
-    std::vector<std::vector<std::pair<int, int>>> BuildResidualGraph(const std::vector<std::pair<int, int>> adj[], int N, const std::vector<std::vector<int>> &flow)
-    {
-        std::vector<std::vector<std::pair<int, int>>> residual(N);
-        for (int u = 0; u < N; ++u)
-        {
-            for (size_t i = 0; i < adj[u].size(); ++i)
-            {
-                const auto &edge = adj[u][i];
-                int v = edge.first;
-                int capacity = edge.second;
-                int f = flow[u][i];
-
-                // Forward edge with residual capacity
-                int residual_forward = capacity - f;
-                if (residual_forward > 0)
-                {
-                    residual[u].emplace_back(v, residual_forward);
-                }
-
-                // Backward edge with residual capacity
-                int residual_backward = f;
-                if (residual_backward > 0)
-                {
-                    residual[v].emplace_back(u, residual_backward);
-                }
-            }
-        }
-        return residual;
-    }
-
     int EdmondKarp(const std::vector<std::pair<int, int>> adj[], int N, int source, int sink)
     {
-        // Build residual graph using tuples (to, capacity, reverse_edge_index)
         std::vector<std::vector<std::tuple<int, int, int>>> residual(N);
         for (int u = 0; u < N; ++u)
         {
@@ -738,7 +650,6 @@ namespace GraphAlgorithms
                         min_cap[v] = std::min(min_cap[u], cap);
                         if (v == sink)
                         {
-                            // Update flow and residual capacities
                             int flow = min_cap[sink];
                             max_flow += flow;
                             int curr = v;
@@ -746,9 +657,7 @@ namespace GraphAlgorithms
                             {
                                 int prev = parent[curr];
                                 int e_idx = parent_edge[curr];
-                                // Update forward edge
                                 std::get<1>(residual[prev][e_idx]) -= flow;
-                                // Update reverse edge
                                 int rev_idx = std::get<2>(residual[prev][e_idx]);
                                 std::get<1>(residual[curr][rev_idx]) += flow;
                                 curr = prev;
@@ -791,7 +700,7 @@ namespace GraphAlgorithms
                     {
                         if (color[v] == -1)
                         {
-                            color[v] = color[u] ^ 1; // Toggle color between 0 and 1
+                            color[v] = color[u] ^ 1;
                             q.push(v);
                         }
                         else if (color[v] == color[u])
@@ -805,12 +714,11 @@ namespace GraphAlgorithms
         return true;
     }
 
-    // Helper function to compute the Longest Prefix Suffix (LPS) array for the KMP algorithm
     std::vector<int> ComputeLPS(const std::string &pattern)
     {
         int m = pattern.size();
         std::vector<int> lps(m, 0);
-        int len = 0; // Length of the previous longest prefix suffix
+        int len = 0;
 
         for (int i = 1; i < m;)
         {
@@ -836,18 +744,17 @@ namespace GraphAlgorithms
         return lps;
     }
 
-    // KMP algorithm to find all occurrences of a pattern in a text
     std::vector<int> KMP(const std::string &text, const std::string &pattern)
     {
         std::vector<int> matches;
         int n = text.size();
         int m = pattern.size();
         if (m == 0)
-            return matches; // Handle empty pattern case
+            return matches;
 
         std::vector<int> lps = ComputeLPS(pattern);
-        int i = 0; // Index for text
-        int j = 0; // Index for pattern
+        int i = 0;
+        int j = 0;
 
         while (i < n)
         {
@@ -859,13 +766,11 @@ namespace GraphAlgorithms
 
             if (j == m)
             {
-                // Pattern found at index i - j
                 matches.push_back(i - j);
                 j = lps[j - 1];
             }
             else if (i < n && pattern[j] != text[i])
             {
-                // Mismatch after j matches
                 if (j != 0)
                 {
                     j = lps[j - 1];
@@ -903,19 +808,16 @@ namespace GraphAlgorithms
         const int total_nodes = sink + 1;
         std::vector<std::vector<Edge>> graph(total_nodes);
 
-        // Connect source to left partition (0 to m-1)
         for (int u = 0; u < m; ++u)
         {
             add_edge(graph, source, u, 1);
         }
 
-        // Connect right partition (m to m+n-1) to sink
         for (int v = m; v < m + n; ++v)
         {
             add_edge(graph, v, sink, 1);
         }
 
-        // Add edges from left to right based on the bipartite graph
         for (int u = 0; u < m; ++u)
         {
             for (int neighbor : adj[u])
@@ -950,9 +852,8 @@ namespace GraphAlgorithms
             }
 
             if (parent[sink] == -1)
-                break; // No augmenting path found
+                break;
 
-            // Find minimum residual capacity along the augmenting path
             int flow = INT_MAX;
             for (int v = sink; v != source; v = parent[v])
             {
@@ -967,7 +868,6 @@ namespace GraphAlgorithms
                 }
             }
 
-            // Update residual capacities and reverse edges
             for (int v = sink; v != source; v = parent[v])
             {
                 int u = parent[v];
@@ -990,7 +890,6 @@ namespace GraphAlgorithms
 
     bool HavelHakimi(std::vector<int> degrees)
     {
-        // Check if the sum of degrees is even and all degrees are non-negative
         int sum = std::accumulate(degrees.begin(), degrees.end(), 0);
         if (sum % 2 != 0)
             return false;
@@ -1003,13 +902,11 @@ namespace GraphAlgorithms
 
         while (true)
         {
-            // Remove all zeros from the end to handle trivial cases faster
             std::sort(degrees.begin(), degrees.end(), std::greater<int>());
             if (degrees.empty())
                 return true;
             if (degrees.front() == 0)
             {
-                // All elements must be zero to be valid
                 return std::all_of(degrees.begin(), degrees.end(), [](int d)
                                    { return d == 0; });
             }
@@ -1036,7 +933,6 @@ namespace GraphAlgorithms
     {
         std::vector<std::vector<int>> dist(N, std::vector<int>(N, INT_MAX));
 
-        // Initialize diagonal to 0 and populate direct edges
         for (int i = 0; i < N; ++i)
         {
             dist[i][i] = 0;
@@ -1049,7 +945,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Compute all-pairs shortest paths
         for (int k = 0; k < N; ++k)
         {
             for (int i = 0; i < N; ++i)
@@ -1064,7 +959,6 @@ namespace GraphAlgorithms
             }
         }
 
-        // Check for negative cycles
         bool hasNegativeCycle = false;
         for (int i = 0; i < N; ++i)
         {
@@ -1077,7 +971,6 @@ namespace GraphAlgorithms
 
         return {!hasNegativeCycle, dist};
     }
+}
 
-} // namespace GraphAlgorithms
-
-#endif // GRAPH_ALGORITHMS_H
+#endif

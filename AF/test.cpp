@@ -1,4 +1,4 @@
-#include "algorithms.hpp"
+#include "algorithms.h"
 #include <cassert>
 #include <vector>
 #include <tuple>
