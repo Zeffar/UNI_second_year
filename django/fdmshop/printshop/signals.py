@@ -9,5 +9,5 @@ from django.shortcuts import redirect
 def prevent_blocked_login(sender, request, user, **kwargs):
     if user.blocat:
         messages.error(request, "Your account is blocked. Please contact an administrator.")
-        redirect('login')  # Redirect to the login page
+        redirect('login')  
         logout(request)

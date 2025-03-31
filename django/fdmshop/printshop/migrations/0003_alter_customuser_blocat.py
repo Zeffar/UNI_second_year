@@ -14,8 +14,8 @@ def create_moderatori_group(apps, schema_editor):
     # Assign permissions
     content_type = ContentType.objects.get_for_model(CustomUser)
     permissions = Permission.objects.filter(content_type=content_type, codename__in=[
-        'view_customuser',  # View user data
-        'change_customuser',  # Edit name, email, etc.
+        'view_customuser',  
+        'change_customuser',  
     ])
     group.permissions.add(*permissions)
 
