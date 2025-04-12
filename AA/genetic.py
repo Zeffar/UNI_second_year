@@ -5,7 +5,7 @@ from random import randrange
 
 
 class GeneticAlgorithm:
-    def __init__(self, fitness_function, lower_bound, upper_bound, num_bits, population_size, mutation_probability, num_iterations, elitism_size=1):
+    def __init__(self, fitness_function, lower_bound, upper_bound, num_bits, population_size, mutation_probability, num_iterations, elitism_size=5):
         self.fitness_function = fitness_function
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
