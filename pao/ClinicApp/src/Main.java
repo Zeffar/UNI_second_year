@@ -1,117 +1,499 @@
 package ClinicApp.src;
 
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
+    private static DatabaseConnection dbConnection;
+    private static Scanner scanner = new Scanner(System.in);
+    private static AuditService auditService;
 
     public static void main(String[] args) {
-        System.out.println("--- Medical Cabinet Appointment System ---");
-
-        AppointmentService service = new AppointmentService();
-
-        MedicalSpecialty cardiology = new MedicalSpecialty("Cardiology");
-        MedicalSpecialty dermatology = new MedicalSpecialty("Dermatology");
-        MedicalSpecialty general = new MedicalSpecialty("General Practice");
-
-        // 1. Add Doctors
-        System.out.println("\n--- Adding Doctors ---");
-        Doctor drHouse = service.addDoctor("Gregory", "House", new ContactInfo("555-1234", "house@clinic.com"),
-                new Address("221B Baker St", "Princeton", "08540", "USA"), general);
-        Doctor drWilson = service.addDoctor("James", "Wilson", new ContactInfo("555-5678", "wilson@clinic.com"),
-                new Address("10 Downing St", "Princeton", "08540", "USA"), cardiology);
-        Doctor drCuddy = service.addDoctor("Lisa", "Cuddy", new ContactInfo("555-9999", "cuddy@clinic.com"),
-                new Address("1 Hospital Plz", "Princeton", "08540", "USA"), dermatology); // Changed specialty
-
-        // 6. List all Doctors
+        try {
+            // Initialize database connection and audit service
+            dbConnection = new DatabaseConnection();
+            auditService = AuditService.getInstance();
+            auditService.logAction("APPLICATION_STARTED");
+            
+            System.out.println("=== Medical Cabinet Appointment System ===");
+            System.out.println("Connected to database successfully!");
+            
+            // Main CLI loop
+            boolean running = true;
+            while (running) {
+                showMainMenu();
+                int choice = getIntInput("Enter your choice: ");
+                
+                switch (choice) {
+                    case 1 -> {
+                        auditService.logAction("ACCESSED_DOCTOR_OPERATIONS");
+                        handleDoctorOperations();
+                    }
+                    case 2 -> {
+                        auditService.logAction("ACCESSED_PATIENT_OPERATIONS");
+                        handlePatientOperations();
+                    }
+                    case 3 -> {
+                        auditService.logAction("ACCESSED_APPOINTMENT_OPERATIONS");
+                        handleAppointmentOperations();
+                    }
+                    case 4 -> {
+                        auditService.logAction("VIEWED_ALL_DATA");
+                        showAllData();
+                    }
+                    case 5 -> {
+                        auditService.logAction("VIEWED_AUDIT_LOG");
+                        viewAuditLog();
+                    }
+                    case 6 -> {
+                        auditService.logAction("APPLICATION_EXITED");
+                        System.out.println("Exiting application...");
+                        running = false;
+                    }
+                    default -> System.out.println("Invalid choice. Please try again.");
+                }
+                
+                if (running) {
+                    System.out.println("\nPress Enter to continue...");
+                    scanner.nextLine();
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Database connection error: " + e.getMessage());
+            System.err.println("Make sure PostgreSQL is running and the database 'pao' exists.");
+        } finally {
+            try {
+                if (dbConnection != null) {
+                    dbConnection.close();
+                }
+                scanner.close();
+            } catch (SQLException e) {
+                System.err.println("Error closing database connection: " + e.getMessage());
+            }
+        }
+    }
+    
+    private static void showMainMenu() {
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("           MAIN MENU");
+        System.out.println("=".repeat(50));
+        System.out.println("1. Doctor Operations");
+        System.out.println("2. Patient Operations");
+        System.out.println("3. Appointment Operations");
+        System.out.println("4. View All Data");
+        System.out.println("5. View Audit Log");
+        System.out.println("6. Exit");
+        System.out.println("=".repeat(50));
+    }
+    
+    private static void handleDoctorOperations() {
+        System.out.println("\n--- Doctor Operations ---");
+        System.out.println("1. Add New Doctor");
+        System.out.println("2. View All Doctors");
+        System.out.println("3. View Medical Specialties");
+        
+        int choice = getIntInput("Enter choice: ");
+        
+        try {
+            switch (choice) {
+                case 1 -> {
+                    auditService.logAction("ADD_NEW_DOCTOR_INITIATED");
+                    try {
+                        addNewDoctor();
+                    } catch (SQLException e) {
+                        auditService.logActionWithDetails("DOCTOR_ADDITION_FAILED_DATABASE_ERROR", 
+                            "Error: " + e.getMessage());
+                        throw e;
+                    }
+                }
+                case 2 -> {
+                    auditService.logAction("VIEW_ALL_DOCTORS");
+                    viewAllDoctors();
+                }
+                case 3 -> {
+                    auditService.logAction("VIEW_MEDICAL_SPECIALTIES");
+                    viewMedicalSpecialties();
+                }
+                default -> System.out.println("Invalid choice.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Database error: " + e.getMessage());
+        }
+    }
+    
+    private static void handlePatientOperations() {
+        System.out.println("\n--- Patient Operations ---");
+        System.out.println("1. Add New Patient");
+        System.out.println("2. View All Patients");
+        
+        int choice = getIntInput("Enter choice: ");
+        
+        try {
+            switch (choice) {
+                case 1 -> {
+                    auditService.logAction("ADD_NEW_PATIENT_INITIATED");
+                    try {
+                        addNewPatient();
+                    } catch (SQLException e) {
+                        auditService.logActionWithDetails("PATIENT_ADDITION_FAILED_DATABASE_ERROR", 
+                            "Error: " + e.getMessage());
+                        throw e;
+                    }
+                }
+                case 2 -> {
+                    auditService.logAction("VIEW_ALL_PATIENTS");
+                    viewAllPatients();
+                }
+                default -> System.out.println("Invalid choice.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Database error: " + e.getMessage());
+        }
+    }
+    
+    private static void handleAppointmentOperations() {
+        System.out.println("\n--- Appointment Operations ---");
+        System.out.println("1. Schedule New Appointment");
+        System.out.println("2. View All Appointments");
+        System.out.println("3. Update Appointment Status");
+        
+        int choice = getIntInput("Enter choice: ");
+        
+        try {
+            switch (choice) {
+                case 1 -> {
+                    auditService.logAction("SCHEDULE_NEW_APPOINTMENT_INITIATED");
+                    try {
+                        scheduleNewAppointment();
+                    } catch (SQLException e) {
+                        auditService.logActionWithDetails("APPOINTMENT_SCHEDULING_FAILED_DATABASE_ERROR", 
+                            "Error: " + e.getMessage());
+                        throw e;
+                    }
+                }
+                case 2 -> {
+                    auditService.logAction("VIEW_ALL_APPOINTMENTS");
+                    viewAllAppointments();
+                }
+                case 3 -> {
+                    auditService.logAction("UPDATE_APPOINTMENT_STATUS_INITIATED");
+                    try {
+                        updateAppointmentStatus();
+                    } catch (SQLException e) {
+                        auditService.logActionWithDetails("APPOINTMENT_STATUS_UPDATE_FAILED_DATABASE_ERROR", 
+                            "Error: " + e.getMessage());
+                        throw e;
+                    }
+                }
+                default -> System.out.println("Invalid choice.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Database error: " + e.getMessage());
+        }
+    }
+    
+    private static void addNewDoctor() throws SQLException {
+        System.out.println("\n--- Adding New Doctor ---");
+        
+        System.out.print("First Name: ");
+        String firstName = scanner.nextLine().trim();
+        
+        System.out.print("Last Name: ");
+        String lastName = scanner.nextLine().trim();
+        
+        System.out.print("Phone Number: ");
+        String phone = scanner.nextLine().trim();
+        
+        System.out.print("Email: ");
+        String email = scanner.nextLine().trim();
+        
+        System.out.print("Street Address: ");
+        String street = scanner.nextLine().trim();
+        
+        System.out.print("City: ");
+        String city = scanner.nextLine().trim();
+        
+        System.out.print("Zip Code: ");
+        String zipCode = scanner.nextLine().trim();
+        
+        System.out.print("Country: ");
+        String country = scanner.nextLine().trim();
+        
+        // Show available specialties
+        System.out.println("\nAvailable Medical Specialties:");
+        List<MedicalSpecialty> specialties = dbConnection.getAllMedicalSpecialties();
+        for (int i = 0; i < specialties.size(); i++) {
+            System.out.println((i + 1) + ". " + specialties.get(i).getName());
+        }
+        
+        int specialtyChoice = getIntInput("Select specialty (number): ") - 1;
+        if (specialtyChoice < 0 || specialtyChoice >= specialties.size()) {
+            System.out.println("Invalid specialty choice.");
+            auditService.logAction("DOCTOR_ADDITION_FAILED_INVALID_SPECIALTY");
+            return;
+        }
+        
+        // Create objects
+        ContactInfo contactInfo = new ContactInfo(phone, email);
+        Address address = new Address(street, city, zipCode, country);
+        MedicalSpecialty specialty = specialties.get(specialtyChoice);
+        Doctor doctor = new Doctor(firstName, lastName, contactInfo, address, specialty);
+        
+        // Insert into database
+        int doctorId = dbConnection.insertDoctor(doctor);
+        System.out.println("Doctor added successfully with ID: " + doctorId);
+        
+        // Log successful doctor addition
+        auditService.logActionWithDetails("DOCTOR_ADDED_TO_DATABASE", 
+            String.format("Doctor: %s %s, ID: %d, Specialty: %s", 
+                firstName, lastName, doctorId, specialty.getName()));
+    }
+    
+    private static void addNewPatient() throws SQLException {
+        System.out.println("\n--- Adding New Patient ---");
+        
+        System.out.print("First Name: ");
+        String firstName = scanner.nextLine().trim();
+        
+        System.out.print("Last Name: ");
+        String lastName = scanner.nextLine().trim();
+        
+        System.out.print("Phone Number: ");
+        String phone = scanner.nextLine().trim();
+        
+        System.out.print("Email: ");
+        String email = scanner.nextLine().trim();
+        
+        System.out.print("Street Address: ");
+        String street = scanner.nextLine().trim();
+        
+        System.out.print("City: ");
+        String city = scanner.nextLine().trim();
+        
+        System.out.print("Zip Code: ");
+        String zipCode = scanner.nextLine().trim();
+        
+        System.out.print("Country: ");
+        String country = scanner.nextLine().trim();
+        
+        LocalDate dateOfBirth = null;
+        while (dateOfBirth == null) {
+            System.out.print("Date of Birth (YYYY-MM-DD): ");
+            String dobInput = scanner.nextLine().trim();
+            try {
+                dateOfBirth = LocalDate.parse(dobInput);
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format. Please use YYYY-MM-DD format.");
+            }
+        }
+        
+        // Create objects
+        ContactInfo contactInfo = new ContactInfo(phone, email);
+        Address address = new Address(street, city, zipCode, country);
+        Patient patient = new Patient(firstName, lastName, contactInfo, address, dateOfBirth);
+        
+        // Insert into database
+        int patientId = dbConnection.insertPatient(patient);
+        System.out.println("Patient added successfully with ID: " + patientId);
+        
+        // Log successful patient addition
+        auditService.logActionWithDetails("PATIENT_ADDED_TO_DATABASE", 
+            String.format("Patient: %s %s, ID: %d, DOB: %s", 
+                firstName, lastName, patientId, dateOfBirth.toString()));
+    }
+    
+    private static void scheduleNewAppointment() throws SQLException {
+        System.out.println("\n--- Scheduling New Appointment ---");
+        
+        // Show available doctors
+        System.out.println("\nAvailable Doctors:");
+        List<String> doctors = dbConnection.getDoctorsList();
+        for (String doctor : doctors) {
+            System.out.println(doctor);
+        }
+        
+        int doctorId = getIntInput("Enter Doctor ID: ");
+        
+        // Show available patients
+        System.out.println("\nAvailable Patients:");
+        List<String> patients = dbConnection.getPatientsList();
+        for (String patient : patients) {
+            System.out.println(patient);
+        }
+        
+        int patientId = getIntInput("Enter Patient ID: ");
+        
+        LocalDateTime appointmentDateTime = null;
+        while (appointmentDateTime == null) {
+            System.out.print("Appointment Date and Time (YYYY-MM-DD HH:mm): ");
+            String dateTimeInput = scanner.nextLine().trim();
+            try {
+                appointmentDateTime = LocalDateTime.parse(dateTimeInput, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date/time format. Please use YYYY-MM-DD HH:mm format.");
+            }
+        }
+        
+        System.out.print("Reason for appointment: ");
+        String reason = scanner.nextLine().trim();
+        
+        // Insert appointment
+        int appointmentId = dbConnection.insertAppointment(doctorId, patientId, appointmentDateTime, reason);
+        System.out.println("Appointment scheduled successfully with ID: " + appointmentId);
+        
+        // Log successful appointment scheduling
+        auditService.logActionWithDetails("APPOINTMENT_SCHEDULED_IN_DATABASE", 
+            String.format("Appointment ID: %d, Doctor ID: %d, Patient ID: %d, DateTime: %s, Reason: %s", 
+                appointmentId, doctorId, patientId, appointmentDateTime.toString(), reason));
+    }
+    
+    private static void viewAllDoctors() throws SQLException {
         System.out.println("\n--- All Doctors ---");
-        service.getAllDoctors().forEach(System.out::println);
-
-        // 11. Find Doctors by Specialty
-        System.out.println("\n--- Doctors with Specialty: " + cardiology.getName() + " ---");
-        List<Doctor> cardiologists = service.findDoctorsBySpecialty(cardiology);
-        cardiologists.forEach(System.out::println);
-
-        // 2. Add Patients
-        System.out.println("\n--- Adding Patients ---");
-        Patient patientJohn = service.addPatient("John", "Doe", new ContactInfo("111-2222", "john.d@mail.com"),
-                new Address("123 Main St", "Anytown", "12345", "USA"), LocalDate.of(1985, 5, 15));
-        Patient patientJane = service.addPatient("Jane", "Smith", new ContactInfo("333-4444", "jane.s@mail.com"),
-                new Address("456 Oak Ave", "Otherville", "67890", "USA"), LocalDate.of(1992, 8, 20));
-
-        // 7. List all Patients
+        List<Doctor> doctors = dbConnection.getAllDoctors();
+        if (doctors.isEmpty()) {
+            System.out.println("No doctors found in the database.");
+        } else {
+            for (Doctor doctor : doctors) {
+                System.out.println(doctor);
+            }
+        }
+    }
+    
+    private static void viewAllPatients() throws SQLException {
         System.out.println("\n--- All Patients ---");
-        service.getAllPatients().forEach(System.out::println);
-
-        // 12. Find Patient by ID
-        System.out.println("\n--- Finding Patient ID: " + patientJohn.getPersonId() + " ---");
-        Patient foundPatient = service.findPatientById(patientJohn.getPersonId());
-        System.out.println("Found: " + foundPatient);
-
-        // 3. Schedule Appointments
-        System.out.println("\n--- Scheduling Appointments ---");
-        LocalDateTime time1 = LocalDateTime.now().plusDays(3).withHour(10).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime time2 = LocalDateTime.now().plusDays(3).withHour(11).withMinute(0).withSecond(0).withNano(0);
-        LocalDateTime time3 = LocalDateTime.now().plusDays(4).withHour(9).withMinute(30).withSecond(0).withNano(0);
-        LocalDateTime time4 = LocalDateTime.now().plusDays(3).withHour(10).withMinute(0).withSecond(0).withNano(0); // Conflict
-                                                                                                                    // time
-                                                                                                                    // with
-                                                                                                                    // appt1
-
-        Appointment appt1 = service.scheduleAppointment(drWilson.getPersonId(), patientJohn.getPersonId(), time1,
-                "Heart checkup");
-        Appointment appt2 = service.scheduleAppointment(drHouse.getPersonId(), patientJane.getPersonId(), time2,
-                "General consultation");
-        Appointment appt3 = service.scheduleAppointment(drCuddy.getPersonId(), patientJohn.getPersonId(), time3,
-                "Skin rash");
-        service.scheduleAppointment(drWilson.getPersonId(), patientJane.getPersonId(), time4, "Follow-up"); // Should
-                                                                                                            // fail
-                                                                                                            // (conflict)
-        service.scheduleAppointment(999, patientJane.getPersonId(), time2.plusHours(1), "Checkup"); // Should fail (bad
-                                                                                                    // doctor ID)
-
-        // 8. List all Appointments (Sorted)
-        System.out.println("\n--- All Appointments (Sorted by Date) ---");
-        service.getAllAppointmentsSorted().forEach(System.out::println);
-
-        // 9. List Appointments for a specific Doctor
-        System.out.println("\n--- Appointments for Dr. " + drWilson.getLastName() + " ---");
-        service.getAppointmentsForDoctor(drWilson.getPersonId()).forEach(System.out::println);
-
-        // 10. List Appointments for a specific Patient
-        System.out.println("\n--- Appointments for Patient " + patientJohn.getLastName() + " ---");
-        service.getAppointmentsForPatient(patientJohn.getPersonId()).forEach(System.out::println);
-
-        // 4. Cancel an Appointment
-        System.out.println(
-                "\n--- Cancelling Appointment ID: " + (appt2 != null ? appt2.getAppointmentId() : "N/A") + " ---");
-        if (appt2 != null) {
-            service.cancelAppointment(appt2.getAppointmentId());
+        List<Patient> patients = dbConnection.getAllPatients();
+        if (patients.isEmpty()) {
+            System.out.println("No patients found in the database.");
+        } else {
+            for (Patient patient : patients) {
+                System.out.println(patient);
+            }
         }
-
-        // 5. Complete an Appointment
-        System.out.println(
-                "\n--- Completing Appointment ID: " + (appt1 != null ? appt1.getAppointmentId() : "N/A") + " ---");
-        if (appt1 != null) {
-            service.completeAppointment(appt1.getAppointmentId());
+    }
+    
+    private static void viewAllAppointments() throws SQLException {
+        System.out.println("\n--- All Appointments ---");
+        List<String> appointments = dbConnection.getAllAppointments();
+        if (appointments.isEmpty()) {
+            System.out.println("No appointments found in the database.");
+        } else {
+            for (String appointment : appointments) {
+                System.out.println(appointment);
+            }
         }
-        // Try cancelling already completed appointment
-        if (appt1 != null) {
-            service.cancelAppointment(appt1.getAppointmentId()); // Should fail
+    }
+    
+    private static void viewMedicalSpecialties() throws SQLException {
+        System.out.println("\n--- Medical Specialties ---");
+        List<MedicalSpecialty> specialties = dbConnection.getAllMedicalSpecialties();
+        for (int i = 0; i < specialties.size(); i++) {
+            System.out.println((i + 1) + ". " + specialties.get(i).getName());
         }
-
-        // 14. Get details of a specific Appointment by ID
-        System.out.println(
-                "\n--- Details for Appointment ID: " + (appt3 != null ? appt3.getAppointmentId() : "N/A") + " ---");
-        if (appt3 != null) {
-            Appointment specificAppt = service.findAppointmentById(appt3.getAppointmentId());
-            System.out.println("Found: " + specificAppt);
+    }
+    
+    private static void updateAppointmentStatus() throws SQLException {
+        System.out.println("\n--- Update Appointment Status ---");
+        
+        // First show all appointments
+        viewAllAppointments();
+        
+        int appointmentId = getIntInput("\nEnter Appointment ID to update: ");
+        
+        System.out.println("Status options:");
+        System.out.println("1. SCHEDULED");
+        System.out.println("2. COMPLETED");
+        System.out.println("3. CANCELLED");
+        
+        int statusChoice = getIntInput("Select new status (number): ");
+        String status;
+        
+        switch (statusChoice) {
+            case 1 -> status = "SCHEDULED";
+            case 2 -> status = "COMPLETED";
+            case 3 -> status = "CANCELLED";
+            default -> {
+                System.out.println("Invalid status choice.");
+                return;
+            }
         }
-
-        System.out.println("\n--- Final List of Appointments (Sorted) ---");
-        service.getAllAppointmentsSorted().forEach(System.out::println);
-
-        System.out.println("\n--- System Demo Complete ---");
+        
+        boolean updated = dbConnection.updateAppointmentStatus(appointmentId, status);
+        if (updated) {
+            System.out.println("Appointment status updated successfully to: " + status);
+            
+            // Log successful appointment status update
+            auditService.logActionWithDetails("APPOINTMENT_STATUS_UPDATED", 
+                String.format("Appointment ID: %d, New Status: %s", appointmentId, status));
+        } else {
+            System.out.println("Failed to update appointment. Please check the appointment ID.");
+            auditService.logActionWithDetails("APPOINTMENT_STATUS_UPDATE_FAILED", 
+                String.format("Appointment ID: %d, Attempted Status: %s", appointmentId, status));
+        }
+    }
+    
+    private static void showAllData() {
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("                    ALL DATA OVERVIEW");
+            System.out.println("=".repeat(60));
+            
+            viewAllDoctors();
+            System.out.println();
+            viewAllPatients();
+            System.out.println();
+            viewAllAppointments();
+            
+        } catch (SQLException e) {
+            System.err.println("Error retrieving data: " + e.getMessage());
+        }
+    }
+    
+    private static void viewAuditLog() {
+        System.out.println("\n--- Audit Log Operations ---");
+        System.out.println("1. View Recent Audit Entries (Last 10)");
+        System.out.println("2. View Recent Audit Entries (Last 20)");
+        System.out.println("3. Clear Audit Log");
+        
+        int choice = getIntInput("Enter choice: ");
+        
+        switch (choice) {
+            case 1 -> {
+                auditService.displayRecentAuditEntries(10);
+                auditService.logAction("VIEWED_RECENT_AUDIT_10");
+            }
+            case 2 -> {
+                auditService.displayRecentAuditEntries(20);
+                auditService.logAction("VIEWED_RECENT_AUDIT_20");
+            }
+            case 3 -> {
+                System.out.print("Are you sure you want to clear the audit log? (y/N): ");
+                String confirmation = scanner.nextLine().trim().toLowerCase();
+                if (confirmation.equals("y") || confirmation.equals("yes")) {
+                    auditService.clearAuditLog();
+                    auditService.logAction("AUDIT_LOG_CLEARED");
+                } else {
+                    System.out.println("Audit log clear cancelled.");
+                }
+            }
+            default -> System.out.println("Invalid choice.");
+        }
+    }
+    
+    private static int getIntInput(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            try {
+                String input = scanner.nextLine().trim();
+                return Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+            }
+        }
     }
 }

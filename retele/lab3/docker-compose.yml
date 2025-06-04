@@ -1,0 +1,33 @@
+version: '3.8'
+
+networks:
+  app_net:
+    driver: bridge
+
+services:
+  server:
+    build: .
+    container_name: server
+    command: python -u /app/server.py
+    volumes:
+      - ./capitolulX4/app:/app
+    networks:
+      - app_net
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    tty: true
+
+  client:
+    build: .
+    container_name: client
+    command: sh -c "sleep 5 && python /app/client.py server"
+    volumes:
+      - ./capitolulX4/app:/app
+    networks:
+      - app_net
+    depends_on:
+      - server
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
