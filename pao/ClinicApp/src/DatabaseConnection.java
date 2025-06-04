@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DatabaseConnection {
-    private static final String URL = "jdbc:postgresql://localhost:5432/pao";
+    private static final String URL = "jdbc:postgresql:
     private static final String USERNAME = "admin";
     private static final String PASSWORD = "admin";
     
@@ -29,7 +29,6 @@ public class DatabaseConnection {
         }
     }
     
-    // Medical Specialty operations
     public List<MedicalSpecialty> getAllMedicalSpecialties() throws SQLException {
         List<MedicalSpecialty> specialties = new ArrayList<>();
         String sql = "SELECT id, name FROM medical_specialties ORDER BY name";
@@ -54,10 +53,9 @@ public class DatabaseConnection {
                 }
             }
         }
-        return -1; // Not found
+        return -1;
     }
     
-    // Address operations
     public int insertAddress(Address address) throws SQLException {
         String sql = "INSERT INTO addresses (street, city, zip_code, country) VALUES (?, ?, ?, ?) RETURNING id";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -75,7 +73,6 @@ public class DatabaseConnection {
         throw new SQLException("Failed to insert address");
     }
     
-    // Contact Info operations
     public int insertContactInfo(ContactInfo contactInfo) throws SQLException {
         String sql = "INSERT INTO contact_info (phone_number, email) VALUES (?, ?) RETURNING id";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -91,7 +88,6 @@ public class DatabaseConnection {
         throw new SQLException("Failed to insert contact info");
     }
     
-    // Doctor operations
     public int insertDoctor(Doctor doctor) throws SQLException {
         int addressId = insertAddress(doctor.getAddress());
         int contactInfoId = insertContactInfo(doctor.getContactInfo());
@@ -145,7 +141,6 @@ public class DatabaseConnection {
         return doctors;
     }
     
-    // Patient operations
     public int insertPatient(Patient patient) throws SQLException {
         int addressId = insertAddress(patient.getAddress());
         int contactInfoId = insertContactInfo(patient.getContactInfo());
@@ -195,7 +190,6 @@ public class DatabaseConnection {
         return patients;
     }
     
-    // Appointment operations
     public int insertAppointment(int doctorId, int patientId, LocalDateTime dateTime, String reason) throws SQLException {
         String sql = "INSERT INTO appointments (doctor_id, patient_id, appointment_datetime, reason) VALUES (?, ?, ?, ?) RETURNING id";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -253,7 +247,6 @@ public class DatabaseConnection {
         }
     }
     
-    // Helper method to get doctor and patient IDs for appointments
     public List<String> getDoctorsList() throws SQLException {
         List<String> doctors = new ArrayList<>();
         String sql = "SELECT id, first_name, last_name FROM doctors ORDER BY last_name, first_name";

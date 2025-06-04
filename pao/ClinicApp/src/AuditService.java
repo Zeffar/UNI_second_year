@@ -18,7 +18,6 @@ public class AuditService {
         initializeAuditFile();
     }
     
-    // Singleton pattern to ensure one instance
     public static synchronized AuditService getInstance() {
         if (instance == null) {
             instance = new AuditService();
@@ -78,7 +77,6 @@ public class AuditService {
             return "";
         }
         
-        // If field contains comma, quote, or newline, wrap in quotes and escape quotes
         if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
             return "\"" + field.replace("\"", "\"\"") + "\"";
         }
@@ -107,7 +105,7 @@ public class AuditService {
                 System.out.println("Action Name | Timestamp");
                 System.out.println("-".repeat(50));
                 
-                int startIndex = Math.max(1, lines.size() - numberOfEntries); // Skip header at index 0
+                int startIndex = Math.max(1, lines.size() - numberOfEntries);
                 for (int i = startIndex; i < lines.size(); i++) {
                     String[] parts = lines.get(i).split(",", 2);
                     if (parts.length == 2) {

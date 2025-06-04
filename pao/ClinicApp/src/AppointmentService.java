@@ -1,6 +1,4 @@
 package ClinicApp.src;
-
-
 import java.time.LocalDateTime;
 import java.util.*;
 import java.time.LocalDate;
@@ -15,8 +13,6 @@ public class AppointmentService {
     private Map<Long, Doctor> doctorById;
     private Map<Long, Patient> patientById;
     private Map<Long, Appointment> appointmentById;
-
-
     public AppointmentService() {
         this.doctors = new ArrayList<>();
         this.patients = new ArrayList<>();
@@ -27,7 +23,6 @@ public class AppointmentService {
         this.appointmentById = new HashMap<>();
     }
 
-    // --- Doctor Operations ---
     public Doctor addDoctor(String firstName, String lastName, ContactInfo contactInfo, Address address, MedicalSpecialty specialty) {
         Doctor newDoctor = new Doctor(firstName, lastName, contactInfo, address, specialty);
         this.doctors.add(newDoctor);
@@ -49,8 +44,6 @@ public class AppointmentService {
                 .filter(doctor -> doctor.getSpecialty().equals(specialty))
                 .collect(Collectors.toList());
     }
-
-
     public Patient addPatient(String firstName, String lastName, ContactInfo contactInfo, Address address, LocalDate dateOfBirth) {
         Patient newPatient = new Patient(firstName, lastName, contactInfo, address, dateOfBirth);
         this.patients.add(newPatient);
@@ -90,8 +83,6 @@ public class AppointmentService {
              System.err.println("Error scheduling: Doctor " + doctor.getFullName() + " already has an appointment at " + dateTime);
             return null;
         }
-
-
         Appointment newAppointment = new Appointment(doctor, patient, dateTime, reason);
         this.appointments.add(newAppointment); 
         this.appointmentById.put(newAppointment.getAppointmentId(), newAppointment);
@@ -102,8 +93,6 @@ public class AppointmentService {
     public Appointment findAppointmentById(long id) {
         return this.appointmentById.get(id);
     }
-
-
     public boolean cancelAppointment(long appointmentId) {
         Appointment appointment = findAppointmentById(appointmentId);
         if (appointment != null && appointment.getStatus() == AppointmentStatus.SCHEDULED) {

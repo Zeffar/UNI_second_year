@@ -15,7 +15,6 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            // Initialize database connection and audit service
             dbConnection = new DatabaseConnection();
             auditService = AuditService.getInstance();
             auditService.logAction("APPLICATION_STARTED");
@@ -23,7 +22,6 @@ public class Main {
             System.out.println("=== Medical Cabinet Appointment System ===");
             System.out.println("Connected to database successfully!");
             
-            // Main CLI loop
             boolean running = true;
             while (running) {
                 showMainMenu();
@@ -225,7 +223,6 @@ public class Main {
         System.out.print("Country: ");
         String country = scanner.nextLine().trim();
         
-        // Show available specialties
         System.out.println("\nAvailable Medical Specialties:");
         List<MedicalSpecialty> specialties = dbConnection.getAllMedicalSpecialties();
         for (int i = 0; i < specialties.size(); i++) {
@@ -239,17 +236,14 @@ public class Main {
             return;
         }
         
-        // Create objects
         ContactInfo contactInfo = new ContactInfo(phone, email);
         Address address = new Address(street, city, zipCode, country);
         MedicalSpecialty specialty = specialties.get(specialtyChoice);
         Doctor doctor = new Doctor(firstName, lastName, contactInfo, address, specialty);
         
-        // Insert into database
         int doctorId = dbConnection.insertDoctor(doctor);
         System.out.println("Doctor added successfully with ID: " + doctorId);
         
-        // Log successful doctor addition
         auditService.logActionWithDetails("DOCTOR_ADDED_TO_DATABASE", 
             String.format("Doctor: %s %s, ID: %d, Specialty: %s", 
                 firstName, lastName, doctorId, specialty.getName()));
@@ -293,16 +287,13 @@ public class Main {
             }
         }
         
-        // Create objects
         ContactInfo contactInfo = new ContactInfo(phone, email);
         Address address = new Address(street, city, zipCode, country);
         Patient patient = new Patient(firstName, lastName, contactInfo, address, dateOfBirth);
         
-        // Insert into database
         int patientId = dbConnection.insertPatient(patient);
         System.out.println("Patient added successfully with ID: " + patientId);
         
-        // Log successful patient addition
         auditService.logActionWithDetails("PATIENT_ADDED_TO_DATABASE", 
             String.format("Patient: %s %s, ID: %d, DOB: %s", 
                 firstName, lastName, patientId, dateOfBirth.toString()));
@@ -311,7 +302,6 @@ public class Main {
     private static void scheduleNewAppointment() throws SQLException {
         System.out.println("\n--- Scheduling New Appointment ---");
         
-        // Show available doctors
         System.out.println("\nAvailable Doctors:");
         List<String> doctors = dbConnection.getDoctorsList();
         for (String doctor : doctors) {
@@ -320,7 +310,6 @@ public class Main {
         
         int doctorId = getIntInput("Enter Doctor ID: ");
         
-        // Show available patients
         System.out.println("\nAvailable Patients:");
         List<String> patients = dbConnection.getPatientsList();
         for (String patient : patients) {
@@ -343,11 +332,9 @@ public class Main {
         System.out.print("Reason for appointment: ");
         String reason = scanner.nextLine().trim();
         
-        // Insert appointment
         int appointmentId = dbConnection.insertAppointment(doctorId, patientId, appointmentDateTime, reason);
         System.out.println("Appointment scheduled successfully with ID: " + appointmentId);
         
-        // Log successful appointment scheduling
         auditService.logActionWithDetails("APPOINTMENT_SCHEDULED_IN_DATABASE", 
             String.format("Appointment ID: %d, Doctor ID: %d, Patient ID: %d, DateTime: %s, Reason: %s", 
                 appointmentId, doctorId, patientId, appointmentDateTime.toString(), reason));
@@ -400,7 +387,6 @@ public class Main {
     private static void updateAppointmentStatus() throws SQLException {
         System.out.println("\n--- Update Appointment Status ---");
         
-        // First show all appointments
         viewAllAppointments();
         
         int appointmentId = getIntInput("\nEnter Appointment ID to update: ");
@@ -427,7 +413,6 @@ public class Main {
         if (updated) {
             System.out.println("Appointment status updated successfully to: " + status);
             
-            // Log successful appointment status update
             auditService.logActionWithDetails("APPOINTMENT_STATUS_UPDATED", 
                 String.format("Appointment ID: %d, New Status: %s", appointmentId, status));
         } else {
